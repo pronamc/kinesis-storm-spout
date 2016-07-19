@@ -160,7 +160,7 @@ class KinesisShardGetter implements IShardGetter {
                 new Callable<String>() {
                     @Override
                     public String call() throws Exception {
-                        LOG.debug("In Kinesis Shard Getter");
+                        LOG.debug("In Kinesis Shard Getter  "+request);
                         GetShardIteratorResult result = kinesisClient.getShardIterator(request);
                         return result.getShardIterator();
                     }

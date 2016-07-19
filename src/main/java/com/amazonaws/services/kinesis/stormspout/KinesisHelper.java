@@ -103,7 +103,7 @@ class KinesisHelper implements IShardListGetter {
     }
 
     private DescribeStreamResult getDescribeStreamResult(final DescribeStreamRequest request) {
-        LOG.debug("In getDescribeStreamResult");
+        LOG.debug("In getDescribeStreamResult   "+request);
         return new InfiniteConstantBackoffRetry<DescribeStreamResult>(BACKOFF_MILLIS, AmazonClientException.class,
                 new Callable<DescribeStreamResult>() {
             public DescribeStreamResult call() throws Exception {
