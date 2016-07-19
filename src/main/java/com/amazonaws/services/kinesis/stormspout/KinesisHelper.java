@@ -15,19 +15,10 @@
 
 package com.amazonaws.services.kinesis.stormspout;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
@@ -35,6 +26,13 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.stormspout.utils.InfiniteConstantBackoffRetry;
 import com.amazonaws.services.kinesis.stormspout.utils.ShardIdComparator;
 import com.google.common.collect.ImmutableSortedMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Helper class to fetch the shard list from Kinesis, create Kinesis client objects, etc.
@@ -105,6 +103,7 @@ class KinesisHelper implements IShardListGetter {
     }
 
     private DescribeStreamResult getDescribeStreamResult(final DescribeStreamRequest request) {
+        LOG.debug("In getDescribeStreamResult");
         return new InfiniteConstantBackoffRetry<DescribeStreamResult>(BACKOFF_MILLIS, AmazonClientException.class,
                 new Callable<DescribeStreamResult>() {
             public DescribeStreamResult call() throws Exception {

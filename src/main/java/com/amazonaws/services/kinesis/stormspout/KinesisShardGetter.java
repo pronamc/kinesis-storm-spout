@@ -15,30 +15,19 @@
 
 package com.amazonaws.services.kinesis.stormspout;
 
-import java.util.concurrent.Callable;
-
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.model.*;
+import com.amazonaws.services.kinesis.stormspout.exceptions.InvalidSeekPositionException;
+import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
+import com.amazonaws.services.kinesis.stormspout.utils.InfiniteConstantBackoffRetry;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.kinesis.AmazonKinesisClient;
-import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
-import com.amazonaws.services.kinesis.model.GetRecordsRequest;
-import com.amazonaws.services.kinesis.model.GetRecordsResult;
-import com.amazonaws.services.kinesis.model.GetShardIteratorRequest;
-import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
-import com.amazonaws.services.kinesis.model.InvalidArgumentException;
-import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.kinesis.model.Record;
-import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
-import com.amazonaws.services.kinesis.model.ShardIteratorType;
-import com.amazonaws.services.kinesis.stormspout.exceptions.InvalidSeekPositionException;
-import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
-import com.amazonaws.services.kinesis.stormspout.utils.InfiniteConstantBackoffRetry;
-import com.google.common.collect.ImmutableList;
+import java.util.concurrent.Callable;
 
 /**
  * Fetches data from a Kinesis shard.
@@ -171,6 +160,7 @@ class KinesisShardGetter implements IShardGetter {
                 new Callable<String>() {
                     @Override
                     public String call() throws Exception {
+                        LOG.debug("In Kinesis Shard Getter");
                         GetShardIteratorResult result = kinesisClient.getShardIterator(request);
                         return result.getShardIterator();
                     }
