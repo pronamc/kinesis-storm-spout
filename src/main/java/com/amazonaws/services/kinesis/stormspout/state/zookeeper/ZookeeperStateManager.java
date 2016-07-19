@@ -409,10 +409,10 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
             final LocalShardState shardState = safeGetShardState(shardId);
 
             try {
-                if(sequenceNumber!=null && seekToOnOpen != null){
+                if(shardState.getLatestValidSeqNum().isEmpty() && sequenceNumber!=null && seekToOnOpen != null){
                     getter.seek(seekToOnOpen);
                 }
-                else if(timeStamp!=null && seekToOnOpen !=null){
+                else if(shardState.getLatestValidSeqNum().isEmpty() && timeStamp!=null && seekToOnOpen !=null){
                     LOG.debug("Tries from at timestamp");
                     getter.seek(seekToOnOpen);
                 }
