@@ -15,14 +15,13 @@
 
 package com.amazonaws.services.kinesis.stormspout.state.zookeeper;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.amazonaws.services.kinesis.model.Record;
+import com.amazonaws.services.kinesis.stormspout.*;
+import com.amazonaws.services.kinesis.stormspout.exceptions.InvalidSeekPositionException;
+import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
+import com.amazonaws.services.kinesis.stormspout.state.IKinesisSpoutStateManager;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.zookeeper.WatchedEvent;
@@ -31,18 +30,13 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazonaws.services.kinesis.model.Record;
-import com.amazonaws.services.kinesis.stormspout.IShardGetter;
-import com.amazonaws.services.kinesis.stormspout.IShardGetterBuilder;
-import com.amazonaws.services.kinesis.stormspout.IShardListGetter;
-import com.amazonaws.services.kinesis.stormspout.InitialPositionInStream;
-import com.amazonaws.services.kinesis.stormspout.KinesisSpoutConfig;
-import com.amazonaws.services.kinesis.stormspout.ShardPosition;
-import com.amazonaws.services.kinesis.stormspout.exceptions.InvalidSeekPositionException;
-import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
-import com.amazonaws.services.kinesis.stormspout.state.IKinesisSpoutStateManager;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Zookeeper backed IKinesisSpoutStateManager.
@@ -54,6 +48,7 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
     private final IShardListGetter shardListGetter;
     private final IShardGetterBuilder getterBuilder;
     private final ShardPosition seekToOnOpen;
+    private String sequenceNumber;
 
     private ZookeeperShardState zk;
     private int taskIndex;
@@ -82,6 +77,20 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
         this.active = false;
     }
 
+    public ZookeeperStateManager(
+            final KinesisSpoutConfig config,
+            final IShardListGetter shardListGetter,
+            final IShardGetterBuilder getterBuilder,
+            final InitialPositionInStream initialPosition,
+            final String sequenceNumber) {
+        this.config = config;
+        this.shardListGetter = shardListGetter;
+        this.getterBuilder = getterBuilder;
+        this.sequenceNumber=sequenceNumber;
+        this.seekToOnOpen = getShardPosition(initialPosition,sequenceNumber);
+        this.active = false;
+    }
+
     private ShardPosition getShardPosition(InitialPositionInStream initialPosition) {
         ShardPosition position = null;
         if (initialPosition.equals(InitialPositionInStream.TRIM_HORIZON)) {
@@ -90,6 +99,22 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
             position = ShardPosition.end();
         } else {
             throw new IllegalArgumentException("Initial position must be one of TRIM_HORIZON or LATEST, but was "
+                    + initialPosition.toString());
+        }
+        return position;
+    }
+
+    private ShardPosition getShardPosition(InitialPositionInStream initialPosition,String sequenceNumber) {
+        ShardPosition position = null;
+        if (initialPosition.equals(InitialPositionInStream.TRIM_HORIZON)) {
+            position = ShardPosition.trimHorizon();
+        } else if (initialPosition.equals(InitialPositionInStream.LATEST)) {
+            position = ShardPosition.end();
+        }
+        else if (initialPosition.equals(InitialPositionInStream.AT_SEQUENCE_NUMBER)) {
+            position = ShardPosition.atSequenceNumber(sequenceNumber);
+        } else {
+            throw new IllegalArgumentException("Initial position must be one of TRIM_HORIZON or LATEST or AT_SEQUENCE_NUMBER, but was "
                     + initialPosition.toString());
         }
         return position;
@@ -351,11 +376,16 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
             final LocalShardState shardState = safeGetShardState(shardId);
 
             try {
-                if (shardState.getLatestValidSeqNum().isEmpty() && seekToOnOpen != null) {
+                if(sequenceNumber!=null && seekToOnOpen != null){
                     getter.seek(seekToOnOpen);
-                } else if (!shardState.getLatestValidSeqNum().isEmpty()) {
-                    getter.seek(ShardPosition.afterSequenceNumber(
-                            shardState.getLatestValidSeqNum()));
+                }
+                else{
+                    if (shardState.getLatestValidSeqNum().isEmpty() && seekToOnOpen != null) {
+                        getter.seek(seekToOnOpen);
+                    } else if (!shardState.getLatestValidSeqNum().isEmpty()) {
+                        getter.seek(ShardPosition.afterSequenceNumber(
+                                shardState.getLatestValidSeqNum()));
+                    }
                 }
             } catch (InvalidSeekPositionException e) {
                 LOG.error(this + " tried to seek getter " + getter + " to an invalid position.", e);

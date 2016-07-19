@@ -45,6 +45,7 @@ public class KinesisSpout implements IRichSpout, Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(KinesisSpout.class);
 
     private final InitialPositionInStream initialPosition;
+    private String sequenceNumber=null;
 
     // Initialized before open
     private final KinesisSpoutConfig config;
@@ -82,6 +83,9 @@ public class KinesisSpout implements IRichSpout, Serializable {
                         config.getMaxRecordsPerCall(),
                         config.getEmptyRecordListBackoffMillis());
         this.initialPosition = config.getInitialPositionInStream();
+        if(config.getSequenceNumber()!=null){
+            this.sequenceNumber = config.getSequenceNumber();
+        }
     }
 
     /**
@@ -106,7 +110,11 @@ public class KinesisSpout implements IRichSpout, Serializable {
 
         this.context = spoutContext;
         this.collector = spoutCollector;
-        this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition);
+        if(this.sequenceNumber!=null){
+            this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition,sequenceNumber);
+        }
+        else
+            this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition);
         LOG.info(this + " open() called with topoConfig task index " + spoutContext.getThisTaskIndex()
                 + " for processing stream " + config.getStreamName());
     }

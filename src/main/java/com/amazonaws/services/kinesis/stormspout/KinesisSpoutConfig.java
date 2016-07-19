@@ -15,10 +15,10 @@
 
 package com.amazonaws.services.kinesis.stormspout;
 
-import java.io.Serializable;
-
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
+
+import java.io.Serializable;
 
 /**
  * Kinesis Spout configuration.
@@ -34,6 +34,7 @@ public class KinesisSpoutConfig implements Serializable {
     private long emptyRecordListBackoffMillis = 500L;
     private int recordRetryLimit = 3;
     private Regions region = Regions.US_EAST_1;
+    private String sequenceNumber =null;
 
     private final String zookeeperConnectionString;
     private String zookeeperPrefix = "kinesis_storm_spout";
@@ -113,6 +114,11 @@ public class KinesisSpoutConfig implements Serializable {
      */
     public KinesisSpoutConfig withKinesisRecordScheme(IKinesisRecordScheme scheme) {
         this.scheme = scheme;
+        return this;
+    }
+
+    public KinesisSpoutConfig withsequenceNumber(String sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
         return this;
     }
 
@@ -273,5 +279,13 @@ public class KinesisSpoutConfig implements Serializable {
     public KinesisSpoutConfig withEmptyRecordListBackoffMillis(long emptyRecordListBackoffMillis) {
         this.emptyRecordListBackoffMillis = emptyRecordListBackoffMillis;
         return this;
+    }
+
+    public String getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public void setSequenceNumber(String sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
     }
 }
