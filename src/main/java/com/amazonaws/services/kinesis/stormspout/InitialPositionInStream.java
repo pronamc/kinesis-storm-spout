@@ -34,6 +34,11 @@ public enum InitialPositionInStream {
     /**
      * Start from Sequnece Number
      */
-    AT_SEQUENCE_NUMBER;
+    AT_SEQUENCE_NUMBER,
+
+    /**
+     * Start from Timestamp
+     */
+    AT_TIMESTAMP;
 
 }

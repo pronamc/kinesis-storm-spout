@@ -19,6 +19,7 @@ import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * Kinesis Spout configuration.
@@ -35,6 +36,7 @@ public class KinesisSpoutConfig implements Serializable {
     private int recordRetryLimit = 3;
     private Regions region = Regions.US_EAST_1;
     private String sequenceNumber =null;
+    private Date timeStamp=null;
 
     private final String zookeeperConnectionString;
     private String zookeeperPrefix = "kinesis_storm_spout";
@@ -119,6 +121,11 @@ public class KinesisSpoutConfig implements Serializable {
 
     public KinesisSpoutConfig withsequenceNumber(String sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
+        return this;
+    }
+
+    public KinesisSpoutConfig withTimestamp(Date timestamp) {
+        this.timeStamp = timestamp;
         return this;
     }
 
@@ -287,5 +294,13 @@ public class KinesisSpoutConfig implements Serializable {
 
     public void setSequenceNumber(String sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
+    }
+
+    public Date getTimeStamp() {
+        return timeStamp;
+    }
+
+    public void setTimeStamp(Date timeStamp) {
+        this.timeStamp = timeStamp;
     }
 }

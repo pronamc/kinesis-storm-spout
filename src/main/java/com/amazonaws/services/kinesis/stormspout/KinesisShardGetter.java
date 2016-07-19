@@ -27,6 +27,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.concurrent.Callable;
 
 /**
@@ -99,6 +100,7 @@ class KinesisShardGetter implements IShardGetter {
 
         ShardIteratorType iteratorType;
         String seqNum = null;
+        Date timestamp=null;
         switch (position.getPosition()) {
             case TRIM_HORIZON:
                 iteratorType = ShardIteratorType.TRIM_HORIZON;
@@ -114,13 +116,17 @@ class KinesisShardGetter implements IShardGetter {
                 iteratorType = ShardIteratorType.AFTER_SEQUENCE_NUMBER;
                 seqNum = position.getSequenceNum();
                 break;
+            case AT_TIMESTAMP:
+                iteratorType = ShardIteratorType.AT_TIMESTAMP;
+                timestamp = position.getTimeStamp();
+                break;
             default:
                 LOG.error("Invalid seek position " + position);
                 throw new InvalidSeekPositionException(position);
         }
 
         try {
-            shardIterator = seek(iteratorType, seqNum);
+            shardIterator = seek(iteratorType, seqNum, timestamp);
         } catch (InvalidArgumentException e) {
             LOG.error("Error occured while seeking, cannot seek to " + position + ".", e);
             throw new InvalidSeekPositionException(position);
@@ -142,7 +148,7 @@ class KinesisShardGetter implements IShardGetter {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("shardId", shardId).toString();
     }
 
-    private String seek(final ShardIteratorType iteratorType, final String seqNum)
+    private String seek(final ShardIteratorType iteratorType, final String seqNum, final Date timestamp)
         throws AmazonClientException, ResourceNotFoundException, InvalidArgumentException {
         final GetShardIteratorRequest request = new GetShardIteratorRequest();
 
@@ -153,6 +159,10 @@ class KinesisShardGetter implements IShardGetter {
         // SeqNum is only set on {AT, AFTER}_SEQUENCE_NUMBER, so this is safe.
         if (seqNum != null) {
             request.setStartingSequenceNumber(seqNum);
+        }
+
+        if (timestamp != null) {
+            request.setTimestamp(timestamp);
         }
 
         return new InfiniteConstantBackoffRetry<String>(BACKOFF_MILLIS,

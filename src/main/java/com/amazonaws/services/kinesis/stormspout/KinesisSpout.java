@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +47,7 @@ public class KinesisSpout implements IRichSpout, Serializable {
 
     private final InitialPositionInStream initialPosition;
     private String sequenceNumber=null;
+    private Date timeStamp=null;
 
     // Initialized before open
     private final KinesisSpoutConfig config;
@@ -86,6 +88,9 @@ public class KinesisSpout implements IRichSpout, Serializable {
         if(config.getSequenceNumber()!=null){
             this.sequenceNumber = config.getSequenceNumber();
         }
+        if(config.getTimeStamp()!=null){
+            this.timeStamp = config.getTimeStamp();
+        }
     }
 
     /**
@@ -112,6 +117,9 @@ public class KinesisSpout implements IRichSpout, Serializable {
         this.collector = spoutCollector;
         if(this.sequenceNumber!=null){
             this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition,sequenceNumber);
+        }
+        if(this.timeStamp!=null){
+            this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition,timeStamp);
         }
         else
             this.stateManager = new ZookeeperStateManager(config, shardListGetter, getterBuilder, initialPosition);

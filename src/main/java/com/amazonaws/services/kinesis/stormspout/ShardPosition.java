@@ -15,9 +15,10 @@
 
 package com.amazonaws.services.kinesis.stormspout;
 
-import java.io.Serializable;
-
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * Position into a Kinesis shard.
@@ -27,19 +28,20 @@ public class ShardPosition implements Serializable {
 
     private final Position pos;
     private final String sequenceNum;
+    private final Date timeStamp;
 
     /**
      * @return a new ShardPosition to fetch the first available record in the shard.
      */
     public static ShardPosition trimHorizon() {
-        return new ShardPosition(Position.TRIM_HORIZON, null);
+        return new ShardPosition(Position.TRIM_HORIZON, null,null);
     }
 
     /**
      * @return a new ShardPosition to fetch new data in the shard
      */
     public static ShardPosition end() {
-        return new ShardPosition(Position.LATEST, null);
+        return new ShardPosition(Position.LATEST, null,null);
     }
 
     /**
@@ -47,7 +49,15 @@ public class ShardPosition implements Serializable {
      * @return a new ShardPosition starting AT_SEQUENCE_NUMBER sequenceNum.
      */
     public static ShardPosition atSequenceNumber(final String sequenceNum) {
-        return new ShardPosition(Position.AT_SEQUENCE_NUMBER, sequenceNum);
+        return new ShardPosition(Position.AT_SEQUENCE_NUMBER, sequenceNum,null);
+    }
+
+    /**
+     * @param timeStamp timeStamp number to start at.
+     * @return a new ShardPosition starting AT_TIMESTAMP sequenceNum.
+     */
+    public static ShardPosition atTimestamp(final Date timeStamp) {
+        return new ShardPosition(Position.AT_TIMESTAMP, null,timeStamp);
     }
 
     /**
@@ -55,12 +65,13 @@ public class ShardPosition implements Serializable {
      * @return a new ShardPosition starting AFTER_SEQUENCE_NUMBER sequenceNum.
      */
     public static ShardPosition afterSequenceNumber(final String sequenceNum) {
-        return new ShardPosition(Position.AFTER_SEQUENCE_NUMBER, sequenceNum);
+        return new ShardPosition(Position.AFTER_SEQUENCE_NUMBER, sequenceNum,null);
     }
 
-    private ShardPosition(final Position pos, final String sequenceNum) {
+    private ShardPosition(final Position pos, final String sequenceNum,final Date timeStamp) {
         this.pos = pos;
         this.sequenceNum = sequenceNum;
+        this.timeStamp = timeStamp;
     }
 
     /**
@@ -81,6 +92,10 @@ public class ShardPosition implements Serializable {
         return sequenceNum;
     }
 
+    public Date getTimeStamp() {
+        return timeStamp;
+    }
+
     @Override
     public String toString() {
         return ReflectionToStringBuilder.toString(this);
@@ -97,6 +112,8 @@ public class ShardPosition implements Serializable {
         /** AFTER_SEQUENCE_NUMBER. */
         AFTER_SEQUENCE_NUMBER,
         /** LATEST. */
-        LATEST;
+        LATEST,
+        /** AT_TIMESTAMP. */
+        AT_TIMESTAMP;
     }
 }

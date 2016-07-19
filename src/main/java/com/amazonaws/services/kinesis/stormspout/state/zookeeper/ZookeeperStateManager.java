@@ -30,6 +30,7 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
     private final IShardGetterBuilder getterBuilder;
     private final ShardPosition seekToOnOpen;
     private String sequenceNumber;
+    private Date timeStamp;
 
     private ZookeeperShardState zk;
     private int taskIndex;
@@ -91,6 +93,20 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
         this.active = false;
     }
 
+    public ZookeeperStateManager(
+            final KinesisSpoutConfig config,
+            final IShardListGetter shardListGetter,
+            final IShardGetterBuilder getterBuilder,
+            final InitialPositionInStream initialPosition,
+            final Date timestamp) {
+        this.config = config;
+        this.shardListGetter = shardListGetter;
+        this.getterBuilder = getterBuilder;
+        this.timeStamp=timestamp;
+        this.seekToOnOpen = getShardPosition(initialPosition,timestamp);
+        this.active = false;
+    }
+
     private ShardPosition getShardPosition(InitialPositionInStream initialPosition) {
         ShardPosition position = null;
         if (initialPosition.equals(InitialPositionInStream.TRIM_HORIZON)) {
@@ -113,6 +129,23 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
         }
         else if (initialPosition.equals(InitialPositionInStream.AT_SEQUENCE_NUMBER)) {
             position = ShardPosition.atSequenceNumber(sequenceNumber);
+        } else {
+            throw new IllegalArgumentException("Initial position must be one of TRIM_HORIZON or LATEST or AT_SEQUENCE_NUMBER, but was "
+                    + initialPosition.toString());
+        }
+        return position;
+    }
+
+    private ShardPosition getShardPosition(InitialPositionInStream initialPosition,Date timeStamp) {
+        ShardPosition position = null;
+        if (initialPosition.equals(InitialPositionInStream.TRIM_HORIZON)) {
+            position = ShardPosition.trimHorizon();
+        } else if (initialPosition.equals(InitialPositionInStream.LATEST)) {
+            position = ShardPosition.end();
+        }
+        else if (initialPosition.equals(InitialPositionInStream.AT_TIMESTAMP)) {
+            LOG.debug("In At Timestamp");
+            position = ShardPosition.atTimestamp(timeStamp);
         } else {
             throw new IllegalArgumentException("Initial position must be one of TRIM_HORIZON or LATEST or AT_SEQUENCE_NUMBER, but was "
                     + initialPosition.toString());
@@ -377,6 +410,10 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
 
             try {
                 if(sequenceNumber!=null && seekToOnOpen != null){
+                    getter.seek(seekToOnOpen);
+                }
+                else if(timeStamp!=null && seekToOnOpen !=null){
+                    LOG.debug("Tries from at timestamp");
                     getter.seek(seekToOnOpen);
                 }
                 else{
