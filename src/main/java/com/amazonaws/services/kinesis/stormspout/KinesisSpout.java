@@ -154,6 +154,7 @@ public class KinesisSpout implements IRichSpout, Serializable {
     public void nextTuple() {
         synchronized (stateManager) {
             // Task has no assignments.
+            LOG.debug("Entering next tuple");
             if (!stateManager.hasGetters()) {
                 // Sleep here for a bit, so we don't consume too much cpu.
                 try {
@@ -171,6 +172,7 @@ public class KinesisSpout implements IRichSpout, Serializable {
             
             if (stateManager.shouldRetry(currentShardId)) {
                 rec = stateManager.recordToRetry(currentShardId);
+                LOG.debug("In Should Retry  "+rec);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("ShardId " + currentShardId + ": Re-emitting record with partition key " + rec.getPartitionKey() + ", sequence number "
                             + rec.getSequenceNumber());
