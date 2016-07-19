@@ -15,10 +15,10 @@
 
 package com.amazonaws.services.kinesis.stormspout.utils;
 
-import java.util.concurrent.Callable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.Callable;
 
 /**
  * Does an infinite constant time backoff against an exception.
@@ -61,6 +61,7 @@ public class InfiniteConstantBackoffRetry<T> implements Callable<T> {
             try {
                 return f.call();
             } catch (Exception e) {
+                e.printStackTrace();
                 if (retryOn.isAssignableFrom(e.getClass())) {
                     LOG.debug("Caught exception of type " + retryOn.getName() + ", backing off for " + backoffMillis
                             + " ms.");
