@@ -386,6 +386,7 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
             String latestValidSeqNum;
             try {
                 latestValidSeqNum = zk.getLastCommittedSeqNum(shardId);
+                LOG.info("Latest SeqNum to Zookeeper  "+latestValidSeqNum);
             } catch (Exception e) {
                 LOG.error(this + " could not retrieve last committed seqnum for " + shardId
                           + " from ZooKeeper. Starting from default getter position.");

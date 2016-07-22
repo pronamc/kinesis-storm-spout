@@ -214,6 +214,7 @@ public class KinesisSpout implements IRichSpout, Serializable {
             }
 
             // Do periodic ZK commit of shard states.
+            LOG.debug("Last Commit Time  "+lastCommitTime);
             if (System.currentTimeMillis() - lastCommitTime >= config.getCheckpointIntervalMillis()) {
                 LOG.debug(this + " committing local shard states to ZooKeeper.");
 
