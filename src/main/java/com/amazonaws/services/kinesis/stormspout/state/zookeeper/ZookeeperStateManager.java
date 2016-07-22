@@ -366,10 +366,13 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
         ImmutableList<String> shardAssignment = getShardAssignment();
 
         // Task could not get an assignment (e.g. there are too many tasks for too few shards).
+        LOG.info("Latest SeqNum to Zookeeper bootstrapStateFromZookeeper");
         if (shardAssignment.isEmpty()) {
+            LOG.info("Latest SeqNum to Zookeeper bootstrapStateFromZookeeper if");
             this.shardStates = new HashMap<>();
             this.getters = ImmutableList.of();
         } else {
+            LOG.info("Latest SeqNum to Zookeeper bootstrapStateFromZookeeper else");
             this.shardStates = makeLocalState(shardAssignment);
             this.getters = makeGetters(shardAssignment);
         }
@@ -382,6 +385,7 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
     private Map<String, LocalShardState> makeLocalState(ImmutableList<String> shardAssignment) {
         Map<String, LocalShardState> state = new HashMap<>();
 
+        LOG.info("Latest SeqNum to Zookeeper makeLocalState");
         for (final String shardId : shardAssignment) {
             String latestValidSeqNum;
             try {
@@ -390,11 +394,12 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
             } catch (Exception e) {
                 LOG.error(this + " could not retrieve last committed seqnum for " + shardId
                           + " from ZooKeeper. Starting from default getter position.");
+                e.printStackTrace();
                 latestValidSeqNum = "";
             }
             state.put(shardId, new LocalShardState(shardId, latestValidSeqNum, config.getRecordRetryLimit()));
         }
-
+        LOG.info("Latest SeqNum to Zookeeper makeLocalState state  "+state);
         return state;
     }
 
@@ -419,6 +424,7 @@ public class ZookeeperStateManager implements Watcher, IKinesisSpoutStateManager
                 }
                 else{
                     if (shardState.getLatestValidSeqNum().isEmpty() && seekToOnOpen != null) {
+                        LOG.info("No Checkpointing done  "+shardState.toString());
                         getter.seek(seekToOnOpen);
                     } else if (!shardState.getLatestValidSeqNum().isEmpty()) {
                         getter.seek(ShardPosition.afterSequenceNumber(

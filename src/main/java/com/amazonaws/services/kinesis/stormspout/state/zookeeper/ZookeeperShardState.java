@@ -15,17 +15,6 @@
 
 package com.amazonaws.services.kinesis.stormspout.state.zookeeper;
 
-import java.io.IOException;
-import java.util.Random;
-import java.util.concurrent.Callable;
-
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.data.Stat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.amazonaws.services.kinesis.stormspout.KinesisSpoutConfig;
 import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
 import com.amazonaws.services.kinesis.stormspout.state.zookeeper.NodeFunction.Mod;
@@ -36,6 +25,16 @@ import com.netflix.curator.RetryLoop;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.Callable;
 
 /**
  * Handles communication with Zookeeper and methods specific to the spout for saving/restoring
@@ -167,6 +166,7 @@ class ZookeeperShardState {
      * @throws Exception
      */
     void watchShardList(Watcher callback) throws Exception {
+        LOG.debug("BootStrap Watch Called "+SHARD_LIST_SUFFIX);
         watch(SHARD_LIST_SUFFIX, callback);
     }
 
@@ -238,6 +238,7 @@ class ZookeeperShardState {
         RetryLoop.callWithRetry(zk.getZookeeperClient(), new Callable<Void>() {
             @Override
             public Void call() throws Exception {
+                LOG.debug("BootStrap Watch Called "+pathSuffix);
                 zk.checkExists().usingWatcher(callback).forPath(buildZookeeperPath(pathSuffix));
                 return null;
             }
