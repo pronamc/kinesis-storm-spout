@@ -50,7 +50,7 @@ class KinesisShardGetterBuilder implements IShardGetterBuilder {
         ImmutableList.Builder<IShardGetter> builder = new ImmutableList.Builder<>();
 
         for (String shard : shardAssignment) {
-            builder.add(new BufferedGetter(new KinesisShardGetter(streamName, shard, helper.getSharedkinesisClient()),
+            builder.add(new BufferedGetter(new KinesisShardGetter(streamName, shard, helper.getSharedkinesisClient(),maxRecordsPerCall),
                     maxRecordsPerCall,
                     emptyRecordListBackoffMillis));
         }

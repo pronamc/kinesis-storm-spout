@@ -19,7 +19,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
-import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.AmazonKinesisAsyncClient;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.Shard;
@@ -52,7 +52,7 @@ class KinesisHelper implements IShardListGetter {
 
     private transient AWSCredentialsProvider kinesisCredsProvider;
     private transient ClientConfiguration kinesisClientConfig;
-    private transient AmazonKinesisClient kinesisClient;
+    private transient AmazonKinesisAsyncClient kinesisClient;
     private transient Region region;
 
     /**
@@ -117,14 +117,14 @@ class KinesisHelper implements IShardListGetter {
      * @return new instance of AmazonKinesisClient, with parameters supplied by whatever was passed
      *         to the KinesisHelper constructor.
      */
-    private AmazonKinesisClient makeNewKinesisClient() {
-        AmazonKinesisClient client = new AmazonKinesisClient(getKinesisCredsProvider(), getClientConfiguration());
+    private AmazonKinesisAsyncClient makeNewKinesisClient() {
+        AmazonKinesisAsyncClient client = new AmazonKinesisAsyncClient(getKinesisCredsProvider(), getClientConfiguration());
         LOG.info("Using " + getRegion().getName() + " region");
         client.setRegion(getRegion());       
         return client;
     }
 
-    AmazonKinesisClient getSharedkinesisClient() {
+    AmazonKinesisAsyncClient getSharedkinesisClient() {
         if (kinesisClient == null) {
             kinesisClient = makeNewKinesisClient();
         }

@@ -16,7 +16,8 @@
 package com.amazonaws.services.kinesis.stormspout;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.handlers.AsyncHandler;
+import com.amazonaws.services.kinesis.AmazonKinesisAsyncClient;
 import com.amazonaws.services.kinesis.model.*;
 import com.amazonaws.services.kinesis.stormspout.exceptions.InvalidSeekPositionException;
 import com.amazonaws.services.kinesis.stormspout.exceptions.KinesisSpoutException;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Fetches data from a Kinesis shard.
@@ -40,7 +42,12 @@ class KinesisShardGetter implements IShardGetter {
 
     private final String streamName;
     private final String shardId;
-    private final AmazonKinesisClient kinesisClient;
+    private int firstCall;
+    private int maxRecords;
+    //private final AmazonKinesisClient kinesisClient;
+
+    AmazonKinesisAsyncClient kinesisClient;
+    final ConcurrentLinkedQueue<Record> recordsQueue=new ConcurrentLinkedQueue<>();
 
     private String shardIterator;
     private ShardPosition positionInShard;
@@ -50,46 +57,105 @@ class KinesisShardGetter implements IShardGetter {
      * @param shardId Fetch data from this shard
      * @param kinesisClient Kinesis client to use when making requests.
      */
-    KinesisShardGetter(final String streamName, final String shardId, final AmazonKinesisClient kinesisClient) {
+    KinesisShardGetter(final String streamName, final String shardId, final AmazonKinesisAsyncClient kinesisClient, final int maxRecords) {
         this.streamName = streamName;
         this.shardId = shardId;
         this.kinesisClient = kinesisClient;
         this.shardIterator = "";
         this.positionInShard = ShardPosition.end();
+        this.maxRecords = maxRecords;
+        this.firstCall = 0;
+    }
+
+    public void readRecords(final int maxRecordsPerCall) throws AmazonClientException, ResourceNotFoundException, InvalidArgumentException {
+
+        if(!shardIterator.equals(""))    {
+
+            final GetRecordsRequest request = new GetRecordsRequest();
+            request.setShardIterator(shardIterator);
+            request.setLimit(maxRecordsPerCall);
+            kinesisClient.getRecordsAsync(request, new AsyncHandler<GetRecordsRequest, GetRecordsResult>() {
+
+                @Override
+                public void onSuccess(GetRecordsRequest request, GetRecordsResult result) {
+                    if(result.getRecords()!=null && result.getRecords().size()>0){
+                        recordsQueue.addAll(result.getRecords());
+                        for (Record rec : result.getRecords()) {
+                            positionInShard = ShardPosition.afterSequenceNumber(rec.getSequenceNumber());
+                        }
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug(this + " async fetched " + result.getRecords().size() + " records from Kinesis (requested "
+                                    + maxRecordsPerCall + ").");
+                        }
+
+                        shardIterator = result.getNextShardIterator();
+                    }
+                    else{
+                        try {
+                            LOG.debug("Sleeping for 1 second as got 0 records in shard "+shardId);
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                        }
+                    }
+                    readRecords(maxRecordsPerCall);
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    e.printStackTrace();
+                    LOG.debug("Exception fetching "+shardId);
+                    if(e instanceof ExpiredIteratorException){
+                        LOG.info("Expired shard iterator, seeking to last known position.");
+                        try {
+                            seek(positionInShard);
+                        } catch (InvalidSeekPositionException e1) {
+                            LOG.error("Could not seek to last known position after iterator expired.");
+                            throw new KinesisSpoutException(e1);
+                        }
+                        request.setShardIterator(shardIterator);
+                    }
+                    try {
+                        LOG.debug("Sleeping for 1 second as got Exception in shard "+shardId);
+                        Thread.sleep(1000);
+                        readRecords(maxRecordsPerCall);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                    }
+                }
+            });
+        }
+        else{
+            try {
+                LOG.debug("Sleeping for 10 second as got empty shard iterator for shard "+shardId);
+                Thread.sleep(10000);
+                firstCall=0;
+                seek(positionInShard);
+            } catch (InterruptedException e) {
+                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            }  catch (InvalidSeekPositionException e1) {
+                LOG.error("Could not seek to last known position after iterator expired.");
+                throw new KinesisSpoutException(e1);
+            }
+        }
     }
 
     @Override
     public Records getNext(int maxNumberOfRecords)
-        throws AmazonClientException, ResourceNotFoundException, InvalidArgumentException {
+            throws AmazonClientException, ResourceNotFoundException, InvalidArgumentException {
+        final ImmutableList.Builder<Record> records = new ImmutableList.Builder<>();
         if (shardIterator == null) {
             LOG.debug(this + " Null shardIterator for " + shardId + ". This can happen if shard is closed.");
             return Records.empty(true);
         }
-
-        final ImmutableList.Builder<Record> records = new ImmutableList.Builder<>();
-        
-        try {
-            final GetRecordsRequest request = new GetRecordsRequest();
-            request.setShardIterator(shardIterator);
-            request.setLimit(maxNumberOfRecords);
-            final GetRecordsResult result = safeGetRecords(request);
-
-            for (Record rec : result.getRecords()) {
+        LOG.info("Queue had "+recordsQueue.size()+" records for shard "+shardId);
+        for (int i = 0; i < maxNumberOfRecords; i++) {
+            if (!recordsQueue.isEmpty()) {
+                Record rec = recordsQueue.poll();
                 records.add(rec);
-                positionInShard = ShardPosition.afterSequenceNumber(rec.getSequenceNumber());
-            }
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(this + " fetched " + result.getRecords().size() + " records from Kinesis (requested "
-                        + maxNumberOfRecords + ").");
-            }
-
-            shardIterator = result.getNextShardIterator();            
-        } catch (AmazonClientException e) {
-            // We'll treat this equivalent to fetching 0 records - the spout drives the retry as part of nextTuple()
-            // We don't sleep here - we can continue processing ack/fail on the spout thread.
-            LOG.error(this + "Caught exception when fetching records for " + shardId, e);
+            } else { break; }
         }
-
+        LOG.info("Returning Queue has "+recordsQueue.size()+" records for shard "+shardId);
         return new Records(records.build(), shardIterator == null);
     }
 
@@ -127,6 +193,11 @@ class KinesisShardGetter implements IShardGetter {
 
         try {
             shardIterator = seek(iteratorType, seqNum, timestamp);
+            if(firstCall==0){
+                LOG.debug("Call If First seek Only");
+                readRecords(maxRecords);
+                firstCall++;
+            }
         } catch (InvalidArgumentException e) {
             LOG.error("Error occured while seeking, cannot seek to " + position + ".", e);
             throw new InvalidSeekPositionException(position);
