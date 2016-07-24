@@ -43,7 +43,7 @@ class KinesisShardGetter implements IShardGetter {
     private final String streamName;
     private final String shardId;
     private int firstCall;
-    private int maxRecords;
+    private int maxRecords=100;
     //private final AmazonKinesisClient kinesisClient;
 
     AmazonKinesisAsyncClient kinesisClient;
@@ -63,7 +63,6 @@ class KinesisShardGetter implements IShardGetter {
         this.kinesisClient = kinesisClient;
         this.shardIterator = "";
         this.positionInShard = ShardPosition.end();
-        this.maxRecords = maxRecords;
         this.firstCall = 0;
     }
 
