@@ -105,7 +105,7 @@ class KinesisShardGetter implements IShardGetter {
                     e.printStackTrace();
                     LOG.debug("Exception fetching "+shardId);
                     if(e instanceof ExpiredIteratorException){
-                        LOG.info("Expired shard iterator, seeking to last known position.");
+                        LOG.debug("Expired shard iterator, seeking to last known position.");
                         try {
                             seek(positionInShard);
                         } catch (InvalidSeekPositionException e1) {
@@ -147,21 +147,21 @@ class KinesisShardGetter implements IShardGetter {
             LOG.debug(this + " Null shardIterator for " + shardId + ". This can happen if shard is closed.");
             return Records.empty(true);
         }
-        LOG.info("Queue had "+recordsQueue.size()+" records for shard "+shardId);
+        LOG.debug("Queue had "+recordsQueue.size()+" records for shard "+shardId);
         for (int i = 0; i < maxNumberOfRecords; i++) {
             if (!recordsQueue.isEmpty()) {
                 Record rec = recordsQueue.poll();
                 records.add(rec);
             } else { break; }
         }
-        LOG.info("Returning Queue has "+recordsQueue.size()+" records for shard "+shardId);
+        LOG.debug("Returning Queue has "+recordsQueue.size()+" records for shard "+shardId);
         return new Records(records.build(), shardIterator == null);
     }
 
     @Override
     public void seek(ShardPosition position)
         throws AmazonClientException, ResourceNotFoundException, InvalidSeekPositionException {
-        LOG.info("Seeking to " + position);
+        LOG.debug("Seeking to " + position);
 
         ShardIteratorType iteratorType;
         String seqNum = null;
