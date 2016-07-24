@@ -63,6 +63,7 @@ class KinesisShardGetter implements IShardGetter {
         this.kinesisClient = kinesisClient;
         this.shardIterator = "";
         this.positionInShard = ShardPosition.end();
+        this.maxRecords = maxRecords;
         this.firstCall = 0;
     }
 
